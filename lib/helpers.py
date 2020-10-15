@@ -46,7 +46,7 @@ def display_grid(tf):
     plt.plot(xs[F], ys[F], 'bo', ms=15, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
     plt.legend()
 
-def relax(A, u0, f, nu=1, omega=0.666):
+def relax(A, u0, f, nu=5, omega=0.666):
     u = u0.copy()
     n = A.shape[0]
     Dinv = np.diag(1.0 / np.diag(A))

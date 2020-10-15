@@ -61,7 +61,6 @@ print(' -- randomly generating permuted grids -- ')
 
 p_trials = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75]
 trials = [run_trials(p) for p in p_trials]
-trials = []
 
 print(' -- generating grids from coarsening sweep -- ')
 
