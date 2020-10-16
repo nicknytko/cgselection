@@ -31,6 +31,8 @@ $$\omega = \arg \min_{\omega\in\left(0,1\right)} \lim_{k\to\infty} \frac{ \vec{u
 
 where $\vec{u}^*$ is the ``optimal'' solution, precomputed by a dense linear solve.  Computationally, $\omega$ is approximated using a brute-force sweep of values in $\left(0, 1\right) $.
 
+As a side note, brief experimentation suggests the Jacobi weight as a function of convergence factor to be unimodal with the 1D Poisson problem (Fig ).  This brute-force sweep could perhaps be converted to a numerical optimization to speed up running time.
+
 \section{Generating Coarse Grids}
 
 To train the model, a set of 6016 C/F grids were randomly generated.  A ``reference'' C/F grid was first generated such that every third grid point is a coarse point, and the rest are fine points.  Educated readers may recognize this as a \textit{coarsening by 3}.
@@ -73,7 +75,7 @@ In an attempt to predict optimal Jacobi weight given an arbitrary grid a CNN of 
 \begin{enumerate}
 \item 1-dimensional convolutional layer with kernel size $5$.  Input 1 layer, output 2 layers.  ReLU activation function.
 \item 1-dimensional convolutional layer with kernel size $5$.  Input 2 layers, output 8 layers.  ReLU activation function.
-\item Max pooling layer with kernal size $2$, stride $2$.  This takes the maximum element of each block of $2$ elements, and effectively cuts the size of the input tensor in half.
+\item Max pooling layer with kernel size $2$, stride $2$.  This takes the maximum element of each block of $2$ elements, and effectively cuts the size of the input tensor in half.
 \item Fully connected layer with input size 184, output size 92.  ReLU activation function.
 \item Fully connected layer with input size 92, output size 1.  ReLU activation function.
 \end{enumerate}
@@ -81,6 +83,17 @@ In an attempt to predict optimal Jacobi weight given an arbitrary grid a CNN of 
 \subsection{Training}
 
 The previously generated set of 6016 random grids was split into training and testing sets, with a random $85\%$ of entries going to the training set and the remaining $15\%$ going into the testing set.
+
+The grids were formed into a $N\times 1 \times n$ tensor, with $N=6016$ being the number of grids and $n=31$ being the grid size.  The tensor representation was formed by means of assigning $1$ to coarse points and $-1$ to fine points:
+
+$$
+T_{i1k} = \begin{cases}
+1 & \text{point $k$ in grid $i$ is coarse}\\
+-1 & \text{point $k$ in grid $i$ is fine}
+\end{cases}
+$$
+
+Of course, this assignment is arbitrary and swapping the values would produce similar results.  The input weights were then normalized such that their range lies between $\left[0, 1\right]$.  When displaying any output from the CNN, this transformation must be undone for the results to be sensible.  The grid dataset class contains a \texttt{scale\_output()} method to do this in \texttt{jacobi-cnn/model.py}.
 
 This CNN was run through 200 iterations of a training loop using a MSE (mean-square error) loss function.  In each iteration, minibatches of size $500$ were used to train and backpropagate the model.  Since the number of training samples is not evenly divisible by $500$, these ``extra'' samples were arbitrarily discarded at each iteration.  The MSE loss and L1 loss at each iteration is given by Figures \ref{fig:mse}, \ref{fig:l1}.
 
