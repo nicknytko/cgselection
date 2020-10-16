@@ -3,6 +3,15 @@ import numpy.linalg as la
 import scipy.linalg as sla
 import matplotlib.pyplot as plt
 import torch
+import pickle
+
+def pickle_load(fname):
+    with open(fname, 'rb') as f:
+        return pickle.load(f)
+
+def pickle_save(fname, obj):
+    with open(fname, 'wb') as f:
+        pickle.dump(obj, f)
 
 def grid_to_pytorch(grid):
     g = np.zeros_like(grid, dtype=np.float64)
