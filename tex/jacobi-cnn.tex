@@ -31,7 +31,14 @@ $$\omega = \arg \min_{\omega\in\left(0,1\right)} \lim_{k\to\infty} \frac{ \vec{u
 
 where $\vec{u}^*$ is the ``optimal'' solution, precomputed by a dense linear solve.  Computationally, $\omega$ is approximated using a brute-force sweep of values in $\left(0, 1\right) $.
 
-As a side note, brief experimentation suggests the Jacobi weight as a function of convergence factor to be unimodal with the 1D Poisson problem (Fig ).  This brute-force sweep could perhaps be converted to a numerical optimization to speed up running time.
+As a side note, brief experimentation suggests the Jacobi weight as a function of convergence factor to be unimodal with the 1D Poisson problem (Fig \ref{fig:jacobi_unimodal}).  This brute-force sweep could perhaps be converted to a numerical optimization to speed up running time.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/10-16-20-jacobi-conv-unimodality.png}
+  \caption{Graph showing the factor of convergence vs Jacobi weight for a grid with coarsening by 3}
+  \label{fig:jacobi_unimodal}
+\end{figure}
 
 \section{Generating Coarse Grids}
 
@@ -75,7 +82,7 @@ In an attempt to predict optimal Jacobi weight given an arbitrary grid a CNN of 
 \begin{enumerate}
 \item 1-dimensional convolutional layer with kernel size $5$.  Input 1 layer, output 2 layers.  ReLU activation function.
 \item 1-dimensional convolutional layer with kernel size $5$.  Input 2 layers, output 8 layers.  ReLU activation function.
-\item Max pooling layer with kernel size $2$, stride $2$.  This takes the maximum element of each block of $2$ elements, and effectively cuts the size of the input tensor in half.
+%\item Max pooling layer with kernel size $2$, stride $2$.  This takes the maximum element of each block of $2$ elements, and effectively cuts the size of the input tensor in half.
 \item Fully connected layer with input size 184, output size 92.  ReLU activation function.
 \item Fully connected layer with input size 92, output size 1.  ReLU activation function.
 \end{enumerate}
@@ -95,7 +102,7 @@ $$
 
 Of course, this assignment is arbitrary and swapping the values would produce similar results.  The input weights were then normalized such that their range lies between $\left[0, 1\right]$.  When displaying any output from the CNN, this transformation must be undone for the results to be sensible.  The grid dataset class contains a \texttt{scale\_output()} method to do this in \texttt{jacobi-cnn/model.py}.
 
-This CNN was run through 200 iterations of a training loop using a MSE (mean-square error) loss function.  In each iteration, minibatches of size $500$ were used to train and backpropagate the model.  Since the number of training samples is not evenly divisible by $500$, these ``extra'' samples were arbitrarily discarded at each iteration.  The MSE loss and L1 loss at each iteration is given by Figures \ref{fig:mse}, \ref{fig:l1}.
+This CNN was run through 200 iterations of a training loop using a MSE (mean-square error) loss function.  In each iteration, minibatches of size $500$ were used to train and backpropagate the model.  Since the number of training samples is not evenly divisible by $500$, these ``extra'' samples were arbitrarily discarded at each iteration.  The MSE loss and L1 loss at each iteration is given by Figures \ref{fig:loss_log}, \ref{fig:loss_linear}.
 
 \subsection{Results}
 
@@ -105,15 +112,17 @@ Results of plotting the true vs predicted Jacobi weights can be seen in Figures 
 \begin{figure}[h]
   \centering
   \includegraphics[scale=0.7]{figures/10-16-20-mse-loss.png}
-  \caption{MSE loss per training iteration}
-  \label{fig:mse}
+  \includegraphics[scale=0.7]{figures/10-16-20-l1-loss.png}
+  \caption{MSE, L1 loss per training iteration}
+  \label{fig:loss_log}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.7]{figures/10-16-20-l1-loss.png}
-  \caption{L1 loss per training iteration}
-  \label{fig:l1}
+  \includegraphics[scale=0.7]{figures/10-16-20-mse-linear.png}
+  \includegraphics[scale=0.7]{figures/10-16-20-l1-linear.png}
+  \caption{MSE, L1 loss per training iteration.  Linear $y$-axis, in the event that someone complained about the log scaling.}
+  \label{fig:loss_linear}
 \end{figure}
 
 \begin{figure}[h]
