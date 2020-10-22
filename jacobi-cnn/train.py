@@ -25,7 +25,7 @@ args = vars(parser.parse_args())
 ds = GridDataset('../grids/grids.pkl', '../grids/omegas.pkl')
 cnn = CNN()
 loss = nn.MSELoss()
-sgd = optim.SGD(cnn.parameters(), lr=0.001, momentum=1)
+sgd = optim.SGD(cnn.parameters(), lr=0.001, momentum=0.98)
 
 p = args['testsplit']
 ltr = int(len(ds)*p)
@@ -34,36 +34,57 @@ train, test = td.random_split(ds, [ltr, lte])
 
 iterations = args['iterations']
 mod = int(np.sqrt(iterations))
-overall_loss = np.zeros(iterations)
-l1_loss = np.zeros(iterations)
+
+mse_loss_train = np.zeros(iterations)
+mse_loss_test = np.zeros(iterations)
+l1_loss_train = np.zeros(iterations)
+l1_loss_test = np.zeros(iterations)
+
+def dataset_to_tensor(ds):
+    grids = torch.cat(list(map(lambda b: b[0], ds)))
+    grids = grids.reshape((grids.shape[0], 1, grids.shape[1]))
+    metrics = torch.Tensor(list(map(lambda b: b[1], ds)))
+    return grids, metrics
+
+def compute_grid_loss(cnn, ds):
+    grids, metrics = dataset_to_tensor(ds)
+    output = cnn.forward(grids)
+
+    xhat = output.detach().numpy().flatten()
+    x = metrics.detach().numpy().flatten()
+
+    mse = np.average((x-xhat)**2)
+    l1 = la.norm(x-xhat, 1) / len(x)
+    return mse, l1
+
+test_grids, test_metrics = dataset_to_tensor(test)
 
 for e in range(iterations):
-    batches = td.BatchSampler(td.SubsetRandomSampler(train), args['batchsize'], True)
+    batches = td.BatchSampler(td.SubsetRandomSampler(train), args['batchsize'], False)
 
-    batch_loss = 0
-    batch_l1_loss = 0
     for i, batch in enumerate(batches):
         sgd.zero_grad()
-        batch_grids = torch.cat(list(map(lambda b: b[0], batch)))
-        batch_grids = batch_grids.reshape((batch_grids.shape[0], 1, batch_grids.shape[1]))
-        batch_metrics = torch.Tensor(list(map(lambda b: b[1], batch)))
+        batch_grids, batch_metrics = dataset_to_tensor(batch)
 
         outputs = cnn.forward(batch_grids)
         cur_batch_loss = loss(outputs.reshape([1,1,-1]), batch_metrics.reshape([1,1,-1]))
         cur_batch_loss.backward()
-        batch_loss += cur_batch_loss.item()
-        batch_l1_loss += la.norm((outputs.detach().numpy().flatten()) - batch_metrics.detach().numpy().flatten(), 1)
         sgd.step()
 
-    overall_loss[e] = batch_loss
-    l1_loss[e] = batch_l1_loss
+    mse_epoch_train, l1_epoch_train = compute_grid_loss(cnn, train)
+    mse_epoch_test, l1_epoch_test = compute_grid_loss(cnn, test)
+
+    mse_loss_train[e] = mse_epoch_train; l1_loss_train[e] = l1_epoch_train
+    mse_loss_test[e] = mse_epoch_test; l1_loss_test[e] = l1_epoch_test
 
     if e % mod == 0:
-        print(f'({e/iterations*100:.2f}%) \t Loss: {batch_loss:.4f}')
+        print(f'({e/iterations*100:.2f}%) \t MSE Loss: {mse_epoch_train:.8f}, L1 Loss: {l1_epoch_train:.8f}')
 
 torch.save(cnn.state_dict(), 'cnn_jacobi_model')
-helpers.pickle_save('cnn_train_loss.pkl', overall_loss)
-helpers.pickle_save('cnn_train_l1_loss.pkl', l1_loss)
+helpers.pickle_save('cnn_train_mse_loss.pkl', mse_loss_train)
+helpers.pickle_save('cnn_test_mse_loss.pkl', mse_loss_test)
+helpers.pickle_save('cnn_train_l1_loss.pkl', l1_loss_train)
+helpers.pickle_save('cnn_test_l1_loss.pkl', l1_loss_test)
 
 omega_samples = []
 for sample in train:

@@ -1,5 +1,7 @@
 import numpy as np
 import numpy.linalg as la
+import scipy
+import scipy.optimize
 import scipy.linalg as sla
 import matplotlib.pyplot as plt
 import torch
@@ -55,7 +57,7 @@ def display_grid(tf):
     plt.plot(xs[F], ys[F], 'bo', ms=15, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
     plt.legend()
 
-def relax(A, u0, f, nu=5, omega=0.666):
+def relax(A, u0, f, nu=1, omega=0.666):
     u = u0.copy()
     n = A.shape[0]
     Dinv = np.diag(1.0 / np.diag(A))
@@ -96,7 +98,7 @@ def disp_grid_convergence(A, x, picked_C, u, omega=0.666):
     u_ref = la.solve(A, x)
 
     for i in range(15):
-        u = twolevel(A, P, A1, u, x, 1, omega)
+        u = twolevel(A, P, A1, u, x, 5, omega)
         res = A@u - x
         e = u - u_ref
         plt.plot(x, e)
@@ -123,7 +125,7 @@ def grid_from_coarsening_factor(n, f):
             F[i] = True
         return np.logical_not(F), F
 
-def det_conv_fact(A, picked_C, x, u, omega):
+def det_conv_fact(A, picked_C, x, u, u_ref, omega):
     P = ideal_interpolation(A, picked_C)
     u = u.copy()
 
@@ -131,7 +133,6 @@ def det_conv_fact(A, picked_C, x, u, omega):
     e_array = []
 
     A1 = P.T @ A @ P
-    u_ref = la.solve(A, x)
 
     for i in range(15):
         u = twolevel(A, P, A1, u, x, 1, omega)
@@ -146,21 +147,46 @@ def det_conv_fact(A, picked_C, x, u, omega):
     conv_factor = np.mean(la.norm(e_array[1:], axis=1) / la.norm(e_array[:-1], axis=1))
     return conv_factor
 
-def det_conv_factor_optimal_omega(A, picked_C, x, u):
+def det_conv_factor_optimal_omega(A, picked_C, x, u, u_ref):
     omega_trials = np.linspace(0.01, 0.99, 100)
     conv = 1
     best_omega = 0
 
     for omega in omega_trials:
-        cur_conv = det_conv_fact(A, picked_C, x, u, omega)
+        cur_conv = det_conv_fact(A, picked_C, x, u, u_ref, omega)
         if cur_conv < conv:
             conv = cur_conv
             best_omega = omega
 
     return conv, best_omega
 
+def det_conv_factor_optimal_omega_numopt(A, picked_C, x, u, u_ref):
+    P = ideal_interpolation(A, picked_C)
+    A1 = P.T @ A @ P
+
+    def obj(omega):
+        u = np.zeros(A.shape[0])
+
+        I = 15
+        e_array = np.zeros(I)
+
+        for i in range(I):
+            u = twolevel(A, P, A1, u, x, 1, omega)
+            res = A@u - x
+            e = u - u_ref
+            e_array[i] = la.norm(e)
+
+        conv_factor = np.mean(e_array[1:] / e_array[:-1])
+        return conv_factor
+
+    opt = scipy.optimize.minimize_scalar(obj, (0, 1), bounds=(0, 1), method='bounded', options={'maxiter': 50})
+    return opt.fun, opt.x
+
 def random_u(n, scale=1):
     return (2 * (np.random.rand(n) - 0.5)) * scale
+
+def random_grid(n):
+    return np.random.choice([True, False], size=n, replace=True)
 
 def gen_1d_poisson_fd(N):
     h = (1.0 / (N + 1))

@@ -8,19 +8,22 @@ import torch.utils.data as td
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv1d(1, 2, 5)
-        self.conv2 = nn.Conv1d(2, 8, 5)
+        self.conv1 = nn.Conv1d(1, 5, 5)
+        self.conv2 = nn.Conv1d(5, 20, 5)
         self.pool = nn.MaxPool1d(2, 2)
-        self.fc1 = nn.Linear(184, 92)
-        self.fc2 = nn.Linear(92, 1)
+        self.fc1 = nn.Linear(220, 110)
+        self.fc2 = nn.Linear(110, 55)
+        self.fc3 = nn.Linear(55, 1)
 
     def forward(self, x):
         c = x
         c = nnF.relu(self.conv1(c))
         c = nnF.relu(self.conv2(c))
-        c = c.view([-1,1,184])
+        c = self.pool(c)
+        c = c.view([-1,1,220])
         c = nnF.relu(self.fc1(c))
         c = nnF.relu(self.fc2(c))
+        c = nnF.relu(self.fc3(c))
         return c
 
 class GridDataset(td.Dataset):
