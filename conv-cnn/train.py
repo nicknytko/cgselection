@@ -22,10 +22,10 @@ parser.add_argument('--testsplit', type=float, default=0.85, help='Percent of en
 
 args = vars(parser.parse_args())
 
-ds = GridDataset('../grids/grids.pkl', '../grids/omegas.pkl')
+ds = GridDataset('../grids/grids.pkl', '../grids/conv.pkl')
 cnn = CNN()
-loss = nn.L1Loss()
-sgd = optim.SGD(cnn.parameters(), lr=0.001, momentum=0.98)
+loss = nn.MSELoss()
+sgd = optim.ASGD(cnn.parameters(), lr=0.01)
 
 p = args['testsplit']
 ltr = int(len(ds)*p)
