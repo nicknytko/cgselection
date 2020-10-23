@@ -101,6 +101,8 @@ For the Jacobi model, the CNN was trained for 100 epochs while for the convergen
 
 Results of plotting the true vs predicted Jacobi weights and convergence factors can be seen in Figures \ref{fig:jacobi_preds} and \ref{fig:conv_preds}, respectively.  Interesting ``peaks'' in the predicted values occur when the CNN is more optimistic than the actual Jacobi or convergence factor allows.  These results are interesting and the input grids could perhaps be extreme outliers.  The convergence factor values still have quite a large relative error, but the results seem to be encouraging and suggest that a convergence factor could actually be learned.  A grid corresponding to one of the dips is displayed in Figure \ref{fig:worst}.
 
+As a fun experiment, the most ``convergent'' (or a local minimum) was found by numerically optimizing a random input tensor until the convergence factor was minimized.  Results of this can be seen in Figure \ref{fig:optimized_grid}.
+
 \begin{figure}[h]
   \centering
   \includegraphics[scale=0.7]{figures/jacobi-conv/jacobi_mse.png}
@@ -138,6 +140,13 @@ Results of plotting the true vs predicted Jacobi weights and convergence factors
   \includegraphics[scale=0.7]{figures/jacobi-conv/conv_peak_worst_err.png}
   \caption{Grid corresponding to worst prediction error.  Actual value of $\omega=0.6799$, predicted $\hat{\omega} = 0.2950$.  Absolute error $0.384$, relative error $0.566=56.6\%$.}
   \label{fig:worst}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid.png}
+  \caption{Grid obtained by numerically optimizing CNN output.  The neural net was run ``in reverse'', by running SGD on the input tensor instead of the network weights.  Values $>0$ were interpreted as coarse points, and negative values as fine points.  True convergence factor: $0.2327$, predicted factor: $0.2179$.}
+  \label{fig:optimized_grid}
 \end{figure}
 
 \end{document}

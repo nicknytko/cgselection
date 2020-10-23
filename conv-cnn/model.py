@@ -80,6 +80,12 @@ class GridDataset(td.Dataset):
     def __getitem__(self, idx):
         return [self.grids[idx], self.metric[idx]]
 
+def load_model():
+    cnn = CNN()
+    cnn.load_state_dict(torch.load('cnn_jacobi_model'))
+    cnn.eval()
+    return cnn
+
 if __name__ == '__main__':
     # Run this file to print verbose debug output on the forward propagation
     # Use it to make sure the layer sizes match up
