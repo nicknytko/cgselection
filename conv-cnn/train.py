@@ -25,7 +25,7 @@ args = vars(parser.parse_args())
 ds = GridDataset('../grids/grids.pkl', '../grids/conv.pkl')
 cnn = CNN()
 loss = nn.MSELoss()
-sgd = optim.ASGD(cnn.parameters(), lr=0.01)
+sgd = optim.Adam(cnn.parameters(), lr=0.01)
 
 p = args['testsplit']
 ltr = int(len(ds)*p)
@@ -35,10 +35,10 @@ train, test = td.random_split(ds, [ltr, lte])
 iterations = args['iterations']
 mod = int(np.sqrt(iterations))
 
-mse_loss_train = np.zeros(iterations)
-mse_loss_test = np.zeros(iterations)
-l1_loss_train = np.zeros(iterations)
-l1_loss_test = np.zeros(iterations)
+mse_loss_train = np.zeros(iterations+1)
+mse_loss_test = np.zeros(iterations+1)
+l1_loss_train = np.zeros(iterations+1)
+l1_loss_test = np.zeros(iterations+1)
 
 def dataset_to_tensor(ds):
     grids = torch.cat(list(map(lambda b: b[0], ds)))
@@ -59,6 +59,13 @@ def compute_grid_loss(cnn, ds):
 
 test_grids, test_metrics = dataset_to_tensor(test)
 
+# compute initial loss
+mse_initial_train, l1_initial_train = compute_grid_loss(cnn, train)
+mse_initial_test, l1_initial_test = compute_grid_loss(cnn, test)
+mse_loss_train[0] = mse_initial_train; l1_loss_train[0] = l1_initial_train
+mse_loss_test[0] = mse_initial_test; l1_loss_test[0] = l1_initial_test
+print(f'(0%) \t\t e=0 \t MSE Loss: {mse_initial_train:.8f}, L1 Loss: {l1_initial_train:.8f}')
+
 for e in range(iterations):
     batches = td.BatchSampler(td.SubsetRandomSampler(train), args['batchsize'], False)
 
@@ -74,30 +81,29 @@ for e in range(iterations):
     mse_epoch_train, l1_epoch_train = compute_grid_loss(cnn, train)
     mse_epoch_test, l1_epoch_test = compute_grid_loss(cnn, test)
 
-    mse_loss_train[e] = mse_epoch_train; l1_loss_train[e] = l1_epoch_train
-    mse_loss_test[e] = mse_epoch_test; l1_loss_test[e] = l1_epoch_test
+    mse_loss_train[e+1] = mse_epoch_train; l1_loss_train[e+1] = l1_epoch_train
+    mse_loss_test[e+1] = mse_epoch_test; l1_loss_test[e+1] = l1_epoch_test
 
-    if e % mod == 0 or e == iterations-1:
-        print(f'({e/iterations*100:.2f}%) \t MSE Loss: {mse_epoch_train:.8f}, L1 Loss: {l1_epoch_train:.8f}')
+    print(f'({(e+1)/iterations*100:.2f}%) \t e={e+1} \t MSE Loss: {mse_epoch_train:.8f}, L1 Loss: {l1_epoch_train:.8f}')
 
-torch.save(cnn.state_dict(), 'cnn_jacobi_model')
-helpers.pickle_save('cnn_train_mse_loss.pkl', mse_loss_train)
-helpers.pickle_save('cnn_test_mse_loss.pkl', mse_loss_test)
-helpers.pickle_save('cnn_train_l1_loss.pkl', l1_loss_train)
-helpers.pickle_save('cnn_test_l1_loss.pkl', l1_loss_test)
+torch.save(cnn.state_dict(), 'cnn_jacobi_model'); print('saved model')
+helpers.pickle_save('cnn_train_mse_loss.pkl', mse_loss_train); print('saved training mse loss')
+helpers.pickle_save('cnn_test_mse_loss.pkl', mse_loss_test); print('saved testing mse loss')
+helpers.pickle_save('cnn_train_l1_loss.pkl', l1_loss_train); print('saved training l1 loss')
+helpers.pickle_save('cnn_test_l1_loss.pkl', l1_loss_test); print('saved testing l1 loss')
 
-omega_samples = []
-for sample in train:
-    grid, omega = sample
-    omega = ds.scale_output(omega.item())
-    pred_omega = ds.scale_output(cnn.forward(grid.reshape([1,1,-1]))).item()
-    omega_samples.append([omega, pred_omega])
+train_grids, train_omegas = dataset_to_tensor(train)
+omegas = ds.scale_output(train_omegas)
+pred_omegas = ds.scale_output(cnn.forward(train_grids))
+omega_samples = np.array([omegas.numpy().flatten(), pred_omegas.detach().numpy().flatten()]).T
 helpers.pickle_save('cnn_omega_pred_train.pkl', omega_samples)
 
-omega_samples = []
-for sample in test:
-    grid, omega = sample
-    omega = ds.scale_output(omega.item())
-    pred_omega = ds.scale_output(cnn.forward(grid.reshape([1,1,-1]))).item()
-    omega_samples.append([omega, pred_omega])
+print('saved training samples and predictions')
+
+test_grids, test_omegas = dataset_to_tensor(train)
+omegas = ds.scale_output(test_omegas)
+pred_omegas = ds.scale_output(cnn.forward(test_grids))
+omega_samples = np.array([omegas.numpy().flatten(), pred_omegas.detach().numpy().flatten()]).T
 helpers.pickle_save('cnn_omega_pred_test.pkl', omega_samples)
+
+print('saved testing samples and predictions')

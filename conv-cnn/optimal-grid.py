@@ -8,6 +8,7 @@ import torch.utils.data as td
 import torch.optim as optim
 import sys
 import matplotlib.pyplot as plt
+import scipy.optimize as sopt
 
 sys.path.append('../lib')
 sys.path.append('.')
@@ -19,31 +20,24 @@ N = 31
 cnn = load_model()
 ds = GridDataset('../grids/grids.pkl', '../grids/conv.pkl')
 
-input_T = helpers.grid_to_tensor(helpers.random_grid(N)).reshape([1,1,-1])
-input_T.requires_grad = True
-zero_T = torch.zeros([1,1,1])
+input_vec = helpers.grid_to_pytorch(helpers.random_grid(N))
 
-def tensor_to_grid(T):
-    t = T.detach().numpy().flatten()
+def vec_to_grid(T):
+    t = T.flatten()
     return np.array(list(map(lambda x: x > 0, t)))
 
-loss = nn.MSELoss()
+def obj(grid):
+    return cnn.forward(torch.Tensor(grid).reshape((1,1,-1))).detach().item()
 
-sgd = optim.ASGD((input_T,), lr=0.01)
-I = 50000
-for e in range(I):
-    sgd.zero_grad()
-    output = cnn.forward(input_T)
-    cur_loss = loss(output, zero_T)
-    cur_loss.backward()
-    sgd.step()
+def take_step(grid):
+    grid = grid.copy()
+    n = np.random.randint(0, len(grid))
+    grid[n] = 1.0 - grid[n]
+    return grid
 
-    if e % int(I**0.5) == 0:
-        print(f'{(e/I)*100:.2f}% \t {cur_loss.item()}')
+res = sopt.basinhopping(obj, input_vec, take_step=take_step)
 
-print(input_T)
-
-grid = tensor_to_grid(input_T)
+grid = vec_to_grid(res.x)
 helpers.display_grid(grid)
 plt.show()
 
