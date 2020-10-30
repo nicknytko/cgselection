@@ -20,7 +20,7 @@ The above linear system is solved using a two-level V cycle multigrid method usi
 \item Generate an initial random guess, $\vec{u}_0$.
 \item Pre-smooth the guess using one iteration of Jacobi using weight $\omega$.
 \item Restrict the grid and residual using the operator $\mat{R}=\mat{P}^T$.  The given interpolation operator $\mat{P}$ is constructed as the \textit{ideal interpolation operator}.
-\item Perform a linear solve on the restricted residual to obtain the coarse solution.
+\item Perform a direct linear solve on the restricted residual to obtain the coarse solution.
 \item Interpolate the solution to the fine grid using operator $\mat{P}$.
 \item Post-smooth using one iteration of Jacobi, with same weight $\omega$.
 \end{enumerate}
@@ -29,11 +29,11 @@ The Jacobi smoothing weight that is used, $\omega$, is the optimal weight that m
 
 $$\omega = \arg \min_{\omega\in\left(0,1\right)} \lim_{k\to\infty} \frac{ \vec{u}_{k+1} - \vec{u}^* }{ \vec{u}_{k} - \vec{u}^* }$$
 
-where $\vec{u}^*$ is the ``optimal'' solution, precomputed by a dense linear solve.  Computationally, $\omega$ is approximated a bracked numerical optimization method, with the assumption that $\omega$ is unimodal with respect to the convergence factor.
+where $\vec{u}^*$ is the ``optimal'' solution, precomputed by a dense linear solve.  Computationally, $\omega$ is approximated with a bracketed numerical optimization method, with the assumption that $\omega$ is unimodal with respect to the convergence factor.  If $\omega$ is not unimodal, which could possibly be the case for more complicated differential equations, then a more sophisticated method would be required to find the global optimum.
 
 \section{Generating Coarse Grids}
 
-To train the model, a set of 96000 C/F grids were randomly generated via random perturbation.  Several ``reference'' grids were generated according to varying coarsening factors, of which the following values were used:
+To train the model, a set of 96000 C/F grids were generated via random perturbation.  Several ``reference'' grids were generated according to varying coarsening factors, of which the following values were used:
 
 $$r = \left\{
 \frac{1}{9},\quad
@@ -76,7 +76,7 @@ In an attempt to predict both optimal Jacobi weight and factor of convergence gi
 \end{figure}
 
 \begin{enumerate}
-\item 4 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have similar dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes one input layer and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
+\item 4 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have equal dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes one input layer and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
 \item 4 1-dimensional convolution layers with kernel size 5.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
 \item 4 1-dimensional convolution layers with kernel size 3.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
 \item Max pooling layer with kernel size 2 and stride 2.
@@ -90,7 +90,7 @@ In an attempt to predict both optimal Jacobi weight and factor of convergence gi
 
 The previously generated set of 96,000 random grids was first filtered of any duplicate grids into a unique set of approximately 60,000 grids.  This was then split into training and testing sets, with a random $85\%$ of entries going to the training set and the remaining $15\%$ going into the testing set.
 
-The grids were formed into a $N\times 1 \times n$ tensor, with $N=96000$ being the number of grids and $n=31$ being the grid size.  The tensor representation was formed by means of assigning $1$ to coarse points and $-1$ to fine points:
+The grids were formed into a $N\times 1 \times n$ tensor, with $N$ being the number of grids and $n=31$ being the grid size.  The tensor representation was formed by means of assigning $1$ to coarse points and $-1$ to fine points:
 
 $$
 T_{i1k} = \begin{cases}
@@ -175,7 +175,7 @@ In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} opt
 \begin{figure}[h]
   \centering
   \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid_in_data.png}
-  \caption{Grid in the testing/training data that minimizes convergence factor.  This is just a grid of all coarse points, which reduces to a direct solve.  True convergence factor: $0.11110$, predicted factor: $0.1358$.}
+  \caption{Grid in the testing/training data that minimizes convergence factor.  This is just a grid of all coarse points, which reduces to a direct solve.}
   \label{fig:optimized_grid_in_data}
 \end{figure}
 
