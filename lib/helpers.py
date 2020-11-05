@@ -192,3 +192,26 @@ def gen_1d_poisson_fd(N):
     h = (1.0 / (N + 1))
     A = (1.0/h**2) * (np.eye(N) * 2 - (np.eye(N, k=-1) + np.eye(N, k=1)))
     return A
+
+def gen_1d_poisson_fd_vc(N, c):
+    if not isinstance(c, np.ndarray):
+        c = np.ones(N) * c
+
+    h = 1.0 / (N+1)
+
+    # Centered first-order finite difference operator
+    A_fd_first = (np.eye(N,k=1) - np.eye(N,k=-1))/(2*h)
+
+    # Centered first-order finite difference operator with one-sided finite differences at boundaries
+    # to ensure that boundary values play somewhat nicely
+    A_fd_first_bound = A_fd_first.copy()
+    A_fd_first_bound[0,0] = -1.0/h
+    A_fd_first_bound[0,1] = 1.0/h
+    A_fd_first_bound[-1,-1] = 1.0/h
+    A_fd_first_bound[-1,-2] = -1.0/h
+
+    # Centered second-order finite difference operator
+    A_fd_second = (1.0/h**2) * (np.eye(N)*2 - np.eye(N,k=-1) - np.eye(N,k=1))
+
+    c_prime = A_fd_first_bound@c
+    return -k_prime*A_fd_first - k*A_fd_second
