@@ -214,4 +214,4 @@ def gen_1d_poisson_fd_vc(N, c):
     A_fd_second = (1.0/h**2) * (np.eye(N)*2 - np.eye(N,k=-1) - np.eye(N,k=1))
 
     c_prime = A_fd_first_bound@c
-    return -k_prime*A_fd_first - k*A_fd_second
+    return -c_prime*A_fd_first - c*A_fd_second

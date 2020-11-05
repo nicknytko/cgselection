@@ -50,7 +50,7 @@ def c_poly(x):
     coeffs = random_value(n, 10)
     return np.polyval(coeffs, x)
 
-c_functions = [c_constant, c_random, c_cos, c_linear, c_quadratic]
+c_functions = [c_constant, c_random, c_cos, c_poly]
 def rand_coeffs():
     return np.random.choice(c_functions)(x)
 
@@ -68,8 +68,8 @@ for c in coarsenings:
         coeffs = np.zeros((I, N))
 
         for i in range(I):
-            coeffs = rand_coeffs()
-            A = helpers.gen_1d_poisson_fd_vc(N, coeffs)
+            cs = rand_coeffs()
+            A = helpers.gen_1d_poisson_fd_vc(N, cs)
             u = np.zeros(N)
             u_ref = la.solve(A, x)
 
@@ -83,7 +83,7 @@ for c in coarsenings:
             grids[i] = helpers.grid_to_pytorch(perm_C)
             rates[i] = best_conv
             omegas[i] = best_omega
-            coeffs[i] = coeffs
+            coeffs[i] = cs
 
         trials.append((grids, rates, omegas, np.ones(N)))
 
