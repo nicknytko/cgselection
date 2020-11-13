@@ -17,7 +17,8 @@ try:
     conv = np.array(helpers.pickle_load('grids/conv.pkl'))
     conv_rate = -np.log10(conv)
     grids = np.array(helpers.pickle_load('grids/grids.pkl'))
-    print('loaded weights, convergence factors, and grids to `omegas`, `conv`, `grids`')
+    var = np.array(helpers.pickle_load('grids/var.pkl'))
+    print('loaded weights, convergence factors, and grids to `omegas`, `conv`, `grids`, `var`')
 except e:
     print('No generated grid data')
 

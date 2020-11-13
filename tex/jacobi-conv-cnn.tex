@@ -2,24 +2,29 @@
 
 \begin{document}
 \section{Background}
-The problem being solved is the Poisson problem in one dimension:
-$$ -\grad^2\vec{u} = f $$
+The problem being solved is the Poisson problem in one dimension with variable coefficients:
+$$ -\grad \cdot \left(k\left(\vec{x}\right)\grad\vec{u}\right) = f $$
 $$ f(\vec{x}) = \vec{x} $$
-Defined on the following domain with Dirichlet boundary conditions:
+Where $k\left(\vec{x}\right)$ is some function $k\: : \: \mathbb{R} \to \mathbb{R}$.  For constant $k$ this is equivalent to:
+$$ -k\grad^2\vec{u} = f $$
+The choice of $f\left(\vec{x}\right)$ is arbitrary and was chosen to produce interesting solution plots, but any $f\left(\vec{x}\right)$ should show similar convergence properties.  This differential equation is defined on the following domain with Dirichlet boundary conditions:
 $$ \Omega = \left[-1, 1\right]$$
 $$ \partial\Omega = 0 $$
-This is discretized using finite differences on a grid of $N=31$ equispaced points and results in the following system:
+This is discretized using second-order centered finite differences on a grid of $N=31$ equispaced points and results in the following system:
 $$ \mat{A}\vec{u} = \vec{x} $$
-where
-$$\mat{A} = \frac{1}{h^2} \text{tridiag}\left(\left[1, -2, 1\right]\right)$$
+where the $i$'th entry of $\mat{Au}$, $\left(\mat{Au}\right)_i$ is given by:
+$$\left(\mat{Au}\right)_i = \frac{1}{h^2} \left( -k_{i-\frac{1}{2}} u_{i-1} + \left(k_{i-\frac{1}{2}} + k_{i+\frac{1}{2}}\right)u_i - k_{i+\frac{1}{2}}u_{i+1} \right)$$
 $$h = \frac{1}{N+1}$$
+
+Note that $k\left(x\right)$ is discretized on the \textit{midpoints} of the grid nodes instead of at the gridpoints.  This preserves the SPD structure of the system.\footnote{This also prevents one from becoming a bad person, according to Scott.}
+
 
 The above linear system is solved using a two-level V cycle multigrid method using the following steps:
 
 \begin{enumerate}
-\item Generate an initial random guess, $\vec{u}_0$.
+\item Generate an initial guess of $0$, $\vec{u}_0 = \vec{0}$.
 \item Pre-smooth the guess using one iteration of Jacobi using weight $\omega$.
-\item Restrict the grid and residual using the operator $\mat{R}=\mat{P}^T$.  The given interpolation operator $\mat{P}$ is constructed as the \textit{ideal interpolation operator}.
+\item Restrict the grid and residual using the operator $\mat{R}=\mat{P}^T$.  The given interpolation operator $\mat{P}$ is constructed as the \textit{ideal interpolation operator}, $\mat{P}=-\mat{A}_{ff}^{-1}\mat{A}_{fc}$.
 \item Perform a direct linear solve on the restricted residual to obtain the coarse solution.
 \item Interpolate the solution to the fine grid using operator $\mat{P}$.
 \item Post-smooth using one iteration of Jacobi, with same weight $\omega$.
@@ -33,7 +38,15 @@ where $\vec{u}^*$ is the ``optimal'' solution, precomputed by a dense linear sol
 
 \section{Generating Coarse Grids}
 
-To train the model, a set of 96000 C/F grids were generated via random perturbation.  Several ``reference'' grids were generated according to varying coarsening factors, of which the following values were used:
+To train the model, a set of grids of two types were generated via random perturbation.  These were generated for different problems, and their types are:
+\begin{itemize}
+\item poisson problem with a constant coefficient of 1 ($\laplace u = f$)
+\item variable coefficient problems ($\grad \cdot \left(k\left(x\right)\grad u\right) = f$)
+\end{itemize}
+
+\subsection{Poisson with unitary constant coefficient}
+
+For the constant-coefficient poisson problem, 96000 C/F grids were generated via random perturbation.  Several ``reference'' grids were generated according to varying coarsening factors, of which the following values were used:
 
 $$r = \left\{
 \frac{1}{9},\quad
@@ -62,44 +75,74 @@ $$ p = \left\{0.01, \quad 0.05, \quad 0.1, \quad 0.25, \quad 0.5, \quad 0.75\rig
 
 For each value of $p$, $1000$ random grids were generated according to the above permutation strategy.  Each random grid was then also used to solve the defined Poisson problem, and the optimal Jacobi weight, $\omega$, and convergence factor were recorded.
 
-In total, 16 convergence factors $\times$ 6 probability trials $\times$ 1000 random iterations = 96000 random grids were created.  The code used to generate these grids is given in \texttt{grids/gen\_grids.py}.
+For this case, 16 convergence factors $\times$ 6 probability trials $\times$ 1000 random iterations = 96000 random grids were created.
+
+\subsection{Variable-Coefficient Poisson}
+
+The process of generating the variable coefficient grids is very similar to the constant case.  Again, several ``reference'' grids were generated according to different coarsening factors:
+
+$$r = \left\{
+2,\quad
+3,\quad
+4,\quad
+5,\quad
+6,\quad
+7,\quad
+8,\quad
+9
+\right\}$$
+
+For the sake of time, only integer values of $r$ were used to create the grids.  Using the same $p$ values as above, $3000$ random grids were permuted for each value of $p$.  For each grid, a random function for $k$ is selected from the set:
+
+$$
+k\left(x\right) = \begin{cases} \alpha \\ \alpha\text{rand()} + \beta \\ \alpha\cos\left(\pi x \beta\right) + \gamma\\ \sum_{i=1}^5 \alpha_i x^i \end{cases}
+$$
+
+where the various coefficient values are randomly chosen so that the function of $k\left(x\right)$ is strictly positive.  A total of $144,000$ of these variable coefficient grids were generated, which equates to a total grid count of $240,000$.  The code used to generate these grids is given in \texttt{grids/gen\_grids.py}, and with slight modification can produce the unitary coefficient poisson grids as well.
 
 \section{CNN Model}
 
-In an attempt to predict both optimal Jacobi weight and factor of convergence given an arbitrary grid, a CNN of the following architecture was trained.  The layers of this network were inspired by those used in Residual neural networks (ResNet) in which the output of a layer may ``skip'' over certain layers, thus speeding up training and allowing for deeper networks.  A graphical description is given in Figure \ref{fig:architecture} and also an overview is described below:
+In an attempt to predict both optimal Jacobi weight and factor of convergence given an arbitrary grid, a CNN of the architecture described below was trained.  The layers of this network were inspired by those used in Residual neural networks (ResNet) in which the output of a layer may ``skip'' over certain layers, thus speeding up training and allowing for deeper networks.  %A graphical description is given in Figure \ref{fig:architecture} and also an overview is described below:
+An overview is described below:
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[scale=0.5]{figures/jacobi-conv/cnn_architecture.png}
-  \caption{Architecture of the CNN with ``skipping'' akin to a ResNet.  These skips may avoid vanishing gradients and can simplify training of the network.}
-  \label{fig:architecture}
-\end{figure}
+%% \begin{figure}[t]
+%%   \centering
+%%   \includegraphics[scale=0.5]{figures/jacobi-conv/cnn_architecture.png}
+%%   \caption{Architecture of the CNN with ``skipping'' akin to a ResNet.  These skips may avoid vanishing gradients and can simplify training of the network.}
+%%   \label{fig:architecture}
+%% \end{figure}
 
 \begin{enumerate}
-\item 4 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have equal dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes one input layer and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
+\item 4 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have equal dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes two input layers and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
 \item 4 1-dimensional convolution layers with kernel size 5.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
 \item 4 1-dimensional convolution layers with kernel size 3.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
 \item Max pooling layer with kernel size 2 and stride 2.
-\item The tensor is flattened from dimensions $N \times 5 \times 15$ to $N \times 1 \times 75$.
-\item Fully connected layer with input size 75, output size 40.  ReLU activation function.
-\item Fully connected layer with input size 40, output size 10.  ReLU activation function.
-\item Fully connected layer with input size 10, output size 1.  ReLU activation function.
+\item The tensor is flattened from dimensions $N \times 10 \times 15$ to $N \times 1 \times 150$.
+\item Fully connected layer with input size 150, output size 126.  ReLU activation function.
+\item Fully connected layer with input size 126, output size 101.  ReLU activation function.
+\item Fully connected layer with input size 101, output size 76.  ReLU activation function.
+\item Fully connected layer with input size 76, output size 51.  ReLU activation function.
+\item Fully connected layer with input size 51, output size 26.  ReLU activation function.
+\item Fully connected layer with input size 26, output size 1.  ReLU activation function.
 \end{enumerate}
 
 \subsection{Training}
 
-The previously generated set of 96,000 random grids was first filtered of any duplicate grids into a unique set of approximately 60,000 grids.  This was then split into training and testing sets, with a random $85\%$ of entries going to the training set and the remaining $15\%$ going into the testing set.
+The previously generated set of $240,000$ random grids was split into training and testing sets, with a random $85\%$ of entries going to the training set and the remaining $15\%$ going into the testing set.
 
-The grids were formed into a $N\times 1 \times n$ tensor, with $N$ being the number of grids and $n=31$ being the grid size.  The tensor representation was formed by means of assigning $1$ to coarse points and $-1$ to fine points:
+The grids were formed into a $N\times 2 \times n$ tensor, with $N$ being the number of grids and $n=31$ being the grid size.  The dimension of $2$ in the second index allows the CNN to receive both the \textit{grid} and the \textit{coefficient values} as input.  The tensor representation was formed by means of assigning $1$ to coarse points and $-1$ to fine points:
 
-$$
-T_{i1k} = \begin{cases}
-1 & \text{point $k$ in grid $i$ is coarse}\\
--1 & \text{point $k$ in grid $i$ is fine}
-\end{cases}
-$$
+\begin{align*}
+T_{i1j} &= \begin{cases}
+1 & \text{point $j$ in grid $i$ is coarse}\\
+-1 & \text{point $j$ in grid $i$ is fine}
+\end{cases}\\
+T_{i2j} &= k\left(\frac{j}{n}\right)
+\end{align*}
 
-Of course, this assignment is arbitrary and swapping the values would produce similar results.  The input weights were then normalized such that their range lies between $\left[0, 1\right]$.  When displaying any output from the CNN, this transformation must be undone for the results to be sensible.  The grid dataset class contains a \texttt{scale\_output()} method to do this in \texttt{jacobi-cnn/model.py}.
+Where $k\left(x\right)$ is the coefficient function.  Note that even though this is discretized on the midpoints when the system is created, the CNN still receives the values of the function evaluated on the grid points.  This is to ensure that the input grid and the coefficients have the same shape.
+
+The input weights and convergence factors were then normalized such that their range lies between $\left[0, 1\right]$.  When displaying any output from the CNN, this transformation must be undone for the results to be sensible.  The grid dataset class contains a \texttt{scale\_output()} method to do this in \texttt{jacobi-cnn/model.py}.
 
 The CNN was separately trained for 20 and 30 epochs for the Jacobi weights and convergence factor models, respectively.  Training was done using a MSE (mean-square error) loss function with the \textit{Adam} optimizer.  In each iteration, minibatches of size $500$ were used to train and backpropagate the model.  Nothing special was performed for minibatch sizes under $500$, in the case that the total number of grids was not divisible by $500$.  The MSE loss and L1 loss at each iteration is given by Figures \ref{fig:jacobi_loss}, \ref{fig:conv_loss}.  These are also compared against the loss of a ``trivial predictor'', where the predicted value is simply the average of all input values.
 
@@ -114,15 +157,15 @@ Results of plotting the true vs predicted Jacobi weights and convergence factors
 Model & Metric & Dataset & Value \\
 
 \hline
-Jacobi Weight & MSE & Training & 0.0015810804907232523 \\
-Jacobi Weight & MSE & Testing & 0.0016168837901204824 \\
-Jacobi Weight & L1 & Training & 0.028497139936647067 \\
-Jacobi Weight & L1 & Testing & 0.02862278080380772 \\
+Jacobi Weight & MSE & Training & 0.0017772165592759848 \\
+Jacobi Weight & MSE & Testing & 0.0018083052709698677 \\
+Jacobi Weight & L1 & Training & 0.027565085018382354 \\
+Jacobi Weight & L1 & Testing & 0.027954003228081597\ \\
 \hline
-Convergence Factor & MSE & Training & 0.0004870382254011929 \\
-Convergence Factor & MSE & Testing & 0.00050189538160339 \\
-Convergence Factor & L1 & Training & 0.015667168480636044 \\
-Convergence Factor & L1 & Testing & 0.015805707197538342 \\
+Convergence Factor & MSE & Training & 0.0012732584727928042 \\
+Convergence Factor & MSE & Testing & 0.0013421028852462769 \\
+Convergence Factor & L1 & Training & 0.021628250421262256 \\
+Convergence Factor & L1 & Testing & 0.02198424106174045 \\
 \hline
 \end{tabular}
 \caption{Final training MSE/L1 loss values for the two models.  Lower values correspond to higher model accuracy.}
@@ -131,7 +174,7 @@ Convergence Factor & L1 & Testing & 0.015805707197538342 \\
 
 \subsection{Discrete Grid Optimization}
 
-In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} optimizer was used to obtain the grid corresponding to the minimum convergence factor, with the convergence factor being predicted by the neural network.  Results of this minimization can be seen in Figure \ref{fig:optimized_grid}.  The actual grid in the training/testing data that minimizes the convergence can be seen in Figure \ref{fig:optimized_grid_in_data}, though the results may be obvious.
+In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} optimizer was used to obtain the grid corresponding to the minimum convergence factor, with the convergence factor being predicted by the neural network.  Results of this minimization can be seen on a standard Poisson problem in Figure \ref{fig:optimized_grid_poisson}.  Optimization results for a variable coefficient problem, with $k$ equal to an offset sine wave can be seen in Figure \ref{fig:optimized_grid_varcoeff}.  It is interesting to note that even though the algorithm converged to a semi-optimal grid, the predicted convergence factor was horribly inaccurate (276\% error).
 
 \begin{figure}[h]
   \centering
@@ -167,16 +210,31 @@ In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} opt
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid.png}
-  \caption{Grid obtained by optimizing CNN output.  This was computed using SciPy's Basin-hopping optimizer.  True convergence factor: $0.1464$, predicted factor: $0.1571$.}
-  \label{fig:optimized_grid}
+  \includegraphics[scale=0.7]{figures/grid-opt/poisson_unitary_grid_time.png}
+  \caption{Time evolution of grid obtained by optimizing CNN output on a normal poisson problem, initial grid on bottom and final grid on top.  This was computed using SciPy's Basin-hopping optimizer.  True convergence factor: $0.2105$, predicted factor: $0.2070$.  Elapsed time: $7.980$ seconds.  }
+  \label{fig:optimized_grid_poisson}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid_in_data.png}
-  \caption{Grid in the testing/training data that minimizes convergence factor.  This is just a grid of all coarse points, which reduces to a direct solve.}
-  \label{fig:optimized_grid_in_data}
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_sine_coeffs.png}
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_sine_grid_time.png}
+  \caption{$k(x)=1+0.95\sin\left(400\pi x\right)$ and time evolution of grid obtained by optimizing CNN output on the variable coefficient poisson problem, initial grid on bottom and final grid on top.  True convergence factor: $0.1945$, predicted factor: $0.7317$.  Elapsed time: $8.521$ seconds.  }
+  \label{fig:optimized_grid_varcoeff}
 \end{figure}
+
+%% \begin{figure}[h]
+%%   \centering
+%%   \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid.png}
+%%   \caption{Grid obtained by optimizing CNN output.  This was computed using SciPy's Basin-hopping optimizer.  True convergence factor: $0.1464$, predicted factor: $0.1571$.}
+%%   \label{fig:optimized_grid}
+%% \end{figure}
+
+%% \begin{figure}[h]
+%%   \centering
+%%   \includegraphics[scale=0.7]{figures/jacobi-conv/conv_opt_grid_in_data.png}
+%%   \caption{Grid in the testing/training data that minimizes convergence factor.  This is just a grid of all coarse points, which reduces to a direct solve.}
+%%   \label{fig:optimized_grid_in_data}
+%% \end{figure}
 
 \end{document}

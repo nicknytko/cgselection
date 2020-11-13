@@ -28,31 +28,38 @@ t_start = time.time()
 
 print('randomly generating permuted grids')
 
-coarsenings = np.array([9, 8, 7, 6, 5, 4, 3, 2, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9])
+coarsenings = np.array([9, 8, 7, 6, 5, 4, 3, 2])
 p_trials = [0.01, 0.05, 0.10, 0.25, 0.50, 0.75]
 trials = []
 
-def random_value(N, radius):
-    return (np.random.rand(N) * 2 - 1) * radius
+def random_value(N, radius=1, mean=0):
+    return (np.random.rand(N) * 2 - 1) * radius + mean
+
+# random c functions.  all return >0 values
 
 def c_constant(x):
-    return random_value(1, 10) * x ** 0
+    return random_value(len(x), 5, 5)
 
 def c_random(x):
-    return random_value(N, 1) * (np.random.rand(1)*10 + 1)
+    return random_value(len(x), 0.95, 1) * (np.random.rand(1)*10 + 1)
 
 def c_cos(x):
-    lmbda = random_value(1, 10)
-    return np.cos(x * np.pi * lmbda)
+    lmbda = random_value(1, 5, 5)
+    omega = random_value(1, 5, 5)
+    return omega*np.cos(x * np.pi * lmbda) + omega
 
 def c_poly(x):
     n = np.random.randint(2, 5)
     coeffs = random_value(n, 10)
-    return np.polyval(coeffs, x)
+    polyval = np.polyval(coeffs, x)
+    return np.abs(polyval) + 0.01
 
 c_functions = [c_constant, c_random, c_cos, c_poly]
 def rand_coeffs():
-    return np.random.choice(c_functions)(x)
+    return np.random.choice(c_functions)(np.linspace(0,1,N+1))
+
+def midpt(x):
+    return np.average(np.column_stack([x[1:], x[:-1]]), axis=1)
 
 for c in coarsenings:
     print(f'  generating grids from coarsening by {c}')
@@ -78,14 +85,14 @@ for c in coarsenings:
             for j in range(N):
                 if np.random.rand(1) < p:
                     perm_C[j] = not perm_C[j]
-            best_conv, best_omega = helpers.det_conv_factor_optimal_omega(A, perm_C, x, u, u_ref)
+            best_conv, best_omega = helpers.det_conv_factor_optimal_omega_numopt(A, perm_C, x, u, u_ref)
 
             grids[i] = helpers.grid_to_pytorch(perm_C)
             rates[i] = best_conv
             omegas[i] = best_omega
-            coeffs[i] = cs
+            coeffs[i] = midpt(cs)
 
-        trials.append((grids, rates, omegas, np.ones(N)))
+        trials.append((grids, rates, omegas, coeffs))
 
 print('finished trials')
 
@@ -118,8 +125,13 @@ outputs = [
 for o in outputs:
     var = o['var']
     fname = o['fname']
-    existing = pickle_load(fname)
-    pckle_save(fname, np.concatenate([ np.array(existing), var ]))
+    try:
+        existing = helpers.pickle_load(fname)
+        existing = np.concatenate([ np.array(existing), var ])
+    except Exception as e:
+        print(fname, e)
+        existing = var
+    helpers.pickle_save(fname, existing)
 
 t_end = time.time()
 print(f'finished in {int(t_end-t_start)} seconds')

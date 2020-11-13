@@ -57,6 +57,18 @@ def display_grid(tf):
     plt.plot(xs[F], ys[F], 'bo', ms=15, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
     plt.legend()
 
+def display_many_grids(T):
+    n = T.shape[0]
+    plt.figure(figsize=(10,3*n))
+
+    for i, tf in enumerate(T):
+        xs = np.linspace(-1, 1, len(tf))
+        ys = np.ones(len(tf)) * i
+        C = np.where(tf)
+        F = np.where(np.logical_not(tf))
+        plt.plot(xs[C], ys[C], 'rs', ms=5, markerfacecolor="None", markeredgecolor='red', markeredgewidth=2, label="C Pts")
+        plt.plot(xs[F], ys[F], 'bo', ms=5, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
+
 def relax(A, u0, f, nu=1, omega=0.666):
     u = u0.copy()
     n = A.shape[0]
@@ -97,11 +109,13 @@ def disp_grid_convergence(A, x, picked_C, u, omega=0.666):
     display_grid(picked_C)
     u_ref = la.solve(A, x)
 
+    N = A.shape[0]
+
     for i in range(15):
         u = twolevel(A, P, A1, u, x, 5, omega)
         res = A@u - x
         e = u - u_ref
-        plt.plot(x, e)
+        plt.plot(np.linspace(-1,1,N), e)
         res_array.append(res)
         e_array.append(e)
 
@@ -193,25 +207,13 @@ def gen_1d_poisson_fd(N):
     A = (1.0/h**2) * (np.eye(N) * 2 - (np.eye(N, k=-1) + np.eye(N, k=1)))
     return A
 
-def gen_1d_poisson_fd_vc(N, c):
-    if not isinstance(c, np.ndarray):
-        c = np.ones(N) * c
+def gen_1d_poisson_fd_vc(N, k):
+    assert(len(k) == N+1)
+    h = 1.0/(N+1)
+    offdiag = k[1:-1]
+    maindiag = k[1:] + k[:-1]
+    A = (1.0/h**2) * ( -1 * np.diag(offdiag, k=-1) + -1 * np.diag(offdiag,k=1) + np.diag(maindiag) )
+    return A
 
-    h = 1.0 / (N+1)
-
-    # Centered first-order finite difference operator
-    A_fd_first = (np.eye(N,k=1) - np.eye(N,k=-1))/(2*h)
-
-    # Centered first-order finite difference operator with one-sided finite differences at boundaries
-    # to ensure that boundary values play somewhat nicely
-    A_fd_first_bound = A_fd_first.copy()
-    A_fd_first_bound[0,0] = -1.0/h
-    A_fd_first_bound[0,1] = 1.0/h
-    A_fd_first_bound[-1,-1] = 1.0/h
-    A_fd_first_bound[-1,-2] = -1.0/h
-
-    # Centered second-order finite difference operator
-    A_fd_second = (1.0/h**2) * (np.eye(N)*2 - np.eye(N,k=-1) - np.eye(N,k=1))
-
-    c_prime = A_fd_first_bound@c
-    return -c_prime*A_fd_first - c*A_fd_second
+def midpt(x):
+    return np.average(np.column_stack([x[1:], x[:-1]]), axis=1)

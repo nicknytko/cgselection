@@ -22,7 +22,7 @@ parser.add_argument('--testsplit', type=float, default=0.85, help='Percent of en
 
 args = vars(parser.parse_args())
 
-ds = GridDataset('../grids/grids.pkl', '../grids/conv.pkl')
+ds = GridDataset('../grids/grids.pkl', '../grids/var.pkl', '../grids/conv.pkl')
 cnn = CNN()
 loss = nn.MSELoss()
 sgd = optim.Adam(cnn.parameters(), lr=0.01)
@@ -42,7 +42,7 @@ l1_loss_test = np.zeros(iterations+1)
 
 def dataset_to_tensor(ds):
     grids = torch.cat(list(map(lambda b: b[0], ds)))
-    grids = grids.reshape((grids.shape[0], 1, grids.shape[1]))
+    grids = grids.reshape((grids.shape[0]//2, 2, grids.shape[1]))
     metrics = torch.Tensor(list(map(lambda b: b[1], ds)))
     return grids, metrics
 
