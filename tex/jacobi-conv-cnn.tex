@@ -91,7 +91,7 @@ $$r = \left\{
 9
 \right\}$$
 
-For the sake of time, only integer values of $r$ were used to create the grids.  Using the same $p$ values as above, $3000$ random grids were permuted for each value of $p$.  For each grid, a random function for $k$ is selected from the set:
+For the sake of time, only integer values of $r$ were used to create the grids.  Using the same $p$ values as above, $5000$ random grids were permuted for each value of $p$.  For each grid, a random function for $k$ is selected from the set:
 
 $$
 k\left(x\right) = \begin{cases}
@@ -101,7 +101,7 @@ k\left(x\right) = \begin{cases}
 \left(\sum_{i=1}^5 \alpha_i x^i\right) + 0.01 & -10 < \alpha < 10 \end{cases}
 $$
 
-where the various coefficient values are randomly chosen so that the function of $k\left(x\right)$ is strictly positive.  A total of $144,000$ of these variable coefficient grids were generated, which equates to a total grid count of $240,000$.  The code used to generate these grids is given in \texttt{grids/gen\_grids.py}, and with slight modification can produce the unitary coefficient poisson grids as well.
+where the various coefficient values are randomly chosen so that the function of $k\left(x\right)$ is strictly positive.  A total of $240,000$ of these variable coefficient grids were generated, which equates to a total grid count of $336,000$.  The code used to generate these grids is given in \texttt{grids/gen\_grids.py}, and with slight modification can produce the unitary coefficient poisson grids as well.
 
 \section{CNN Model}
 
@@ -179,9 +179,9 @@ Convergence Factor & L1 & Testing & 0.023865242609902033 \\
 
 \section{Discrete Grid Optimization}
 
-In an attempt to find the most ``convergent'' grid, an implementation of the \textit{simulated annealing} optimizer was used to obtain the grid that minimizes both the convergence rate and C/F ratio (number of points on the coarsest level divided by the total number of grid points).  To minimize both metrics, each iteration of the simulated annealing algorithm alternates between optimizing the convergence rate, or the C/F ratio.  Thus, each pass steps either towards a more optimal C/F ratio, or more optimal convergence rate.  An overview is given in Algorithm \ref{anneal}.  The algorithm itself and helper methods are adapted from those in \citep{Bertsimas1993}.
+In an attempt to find the most ``convergent'' grid, an implementation of the \textit{simulated annealing} optimizer was used to obtain the grid that minimizes both the convergence rate and C/F ratio (number of points on the coarsest level divided by the total number of grid points).  To minimize both metrics, each iteration of the simulated annealing algorithm alternates between optimizing either the convergence rate or the C/F ratio.  Thus, each pass steps either towards a more optimal C/F ratio, or more optimal convergence rate.  An overview is given in Algorithm \ref{anneal}.  The algorithm itself and helper methods are adapted from those in \citep{Bertsimas1993}.
 
-As a sanity check, the optimizer was first run on \textit{only} the convergence factor (Fig \ref{fig:optimized_grid_poisson_conv}) and the C/F ratio (Fig \ref{fig:optimized_grid_poisson_cf}).  An example of optimizing both can be seen in Figure \ref{fig:optimized_grid_poisson}, though the final output is wildly dependant on the random input guess.  More tweaking to the parameters and the algorithm itself is likely needed.
+As a sanity check, the optimizer was first run on \textit{only} the convergence factor (Fig \ref{fig:optimized_grid_poisson_conv}) and the C/F ratio (Fig \ref{fig:optimized_grid_poisson_cf}).  An example of optimizing both can be seen in Figure \ref{fig:optimized_grid_poisson}, though the final output is wildly dependent on the random input guess.  More tweaking to the parameters and the algorithm itself is likely needed.
 
 \begin{algorithm}
   \caption{Simulated annealing}
