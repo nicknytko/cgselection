@@ -100,7 +100,7 @@ helpers.pickle_save('cnn_omega_pred_train.pkl', omega_samples)
 
 print('saved training samples and predictions')
 
-test_grids, test_omegas = dataset_to_tensor(train)
+test_grids, test_omegas = dataset_to_tensor(test)
 omegas = ds.scale_output(test_omegas)
 pred_omegas = ds.scale_output(cnn.forward(test_grids))
 omega_samples = np.array([omegas.numpy().flatten(), pred_omegas.detach().numpy().flatten()]).T

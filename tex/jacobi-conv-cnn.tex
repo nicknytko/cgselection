@@ -16,8 +16,7 @@ where the $i$'th entry of $\mat{Au}$, $\left(\mat{Au}\right)_i$ is given by:
 $$\left(\mat{Au}\right)_i = \frac{1}{h^2} \left( -k_{i-\frac{1}{2}} u_{i-1} + \left(k_{i-\frac{1}{2}} + k_{i+\frac{1}{2}}\right)u_i - k_{i+\frac{1}{2}}u_{i+1} \right)$$
 $$h = \frac{1}{N+1}$$
 
-Note that $k\left(x\right)$ is discretized on the \textit{midpoints} of the grid nodes instead of at the gridpoints.  This preserves the SPD structure of the system.\footnote{This also prevents one from becoming a bad person, according to Scott.}
-
+Note that $k\left(x\right)$ is discretized on the \textit{midpoints} of the grid nodes instead of at the gridpoints.  This preserves the SPD structure of the system.
 
 The above linear system is solved using a two-level V cycle multigrid method using the following steps:
 
@@ -95,7 +94,11 @@ $$r = \left\{
 For the sake of time, only integer values of $r$ were used to create the grids.  Using the same $p$ values as above, $3000$ random grids were permuted for each value of $p$.  For each grid, a random function for $k$ is selected from the set:
 
 $$
-k\left(x\right) = \begin{cases} \alpha \\ \alpha\text{rand()} + \beta \\ \alpha\cos\left(\pi x \beta\right) + \gamma\\ \sum_{i=1}^5 \alpha_i x^i \end{cases}
+k\left(x\right) = \begin{cases}
+\alpha & 0 < \alpha < 10 \\
+\text{rand()}\left(\alpha + 1\right) & 0 < \alpha < 10 \\
+\alpha\cos\left(\pi x \beta\right) + \gamma & 0 < \alpha < 10, 0 < \beta < 10, 0 < \gamma < 10\\
+\left(\sum_{i=1}^5 \alpha_i x^i\right) + 0.01 & -10 < \alpha < 10 \end{cases}
 $$
 
 where the various coefficient values are randomly chosen so that the function of $k\left(x\right)$ is strictly positive.  A total of $144,000$ of these variable coefficient grids were generated, which equates to a total grid count of $240,000$.  The code used to generate these grids is given in \texttt{grids/gen\_grids.py}, and with slight modification can produce the unitary coefficient poisson grids as well.
@@ -113,17 +116,19 @@ An overview is described below:
 %% \end{figure}
 
 \begin{enumerate}
-\item 4 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have equal dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes two input layers and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
-\item 4 1-dimensional convolution layers with kernel size 5.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
-\item 4 1-dimensional convolution layers with kernel size 3.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
+\item 6 1-dimensional convolution layers with kernel size 7.  Zero padding of size two is applied to the left and right to keep the output element the same shape --- this is for the residual architecture so that output vectors have equal dimensionality.  Each convolutional layer has a ReLU activation function.  The first layer takes two input layers and emits 10 output layers, subsequent convolutions have 10 input and output layers.  Even numbered convolution layers $k$ take as input both the output of layers $k-1$ and $k-2$, while odd numbered layers only take the output from layer $k-1$.
+\item 6 1-dimensional convolution layers with kernel size 5.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
+\item 6 1-dimensional convolution layers with kernel size 3.  Zero padding is applied.  ReLU activation.  10 input, 10 output layers.  Similar residual pushing strategy from above.
 \item Max pooling layer with kernel size 2 and stride 2.
 \item The tensor is flattened from dimensions $N \times 10 \times 15$ to $N \times 1 \times 150$.
-\item Fully connected layer with input size 150, output size 126.  ReLU activation function.
-\item Fully connected layer with input size 126, output size 101.  ReLU activation function.
-\item Fully connected layer with input size 101, output size 76.  ReLU activation function.
-\item Fully connected layer with input size 76, output size 51.  ReLU activation function.
-\item Fully connected layer with input size 51, output size 26.  ReLU activation function.
-\item Fully connected layer with input size 26, output size 1.  ReLU activation function.
+\item Fully connected layer with input size 150, output size 132.  ReLU activation function.
+\item Fully connected layer with input size 132, output size 113.  ReLU activation function.
+\item Fully connected layer with input size 113, output size 95.  ReLU activation function.
+\item Fully connected layer with input size 95, output size 76.  ReLU activation function.
+\item Fully connected layer with input size 76, output size 57.  ReLU activation function.
+\item Fully connected layer with input size 57, output size 39.  ReLU activation function.
+\item Fully connected layer with input size 39, output size 20.  ReLU activation function.
+\item Fully connected layer with input size 20, output size 1.  ReLU activation function.
 \end{enumerate}
 
 \subsection{Training}
@@ -157,24 +162,64 @@ Results of plotting the true vs predicted Jacobi weights and convergence factors
 Model & Metric & Dataset & Value \\
 
 \hline
-Jacobi Weight & MSE & Training & 0.0017772165592759848 \\
-Jacobi Weight & MSE & Testing & 0.0018083052709698677 \\
-Jacobi Weight & L1 & Training & 0.027565085018382354 \\
-Jacobi Weight & L1 & Testing & 0.027954003228081597\ \\
+Jacobi Weight & MSE & Training & 0.0018331280443817377 \\
+Jacobi Weight & MSE & Testing & 0.0018395978258922696 \\
+Jacobi Weight & L1 & Training & 0.029253767424938727 \\
+Jacobi Weight & L1 & Testing & 0.029271099756634424 \\
 \hline
-Convergence Factor & MSE & Training & 0.0012732584727928042 \\
-Convergence Factor & MSE & Testing & 0.0013421028852462769 \\
-Convergence Factor & L1 & Training & 0.021628250421262256 \\
-Convergence Factor & L1 & Testing & 0.02198424106174045 \\
+Convergence Factor & MSE & Training & 0.001483894418925047 \\
+Convergence Factor & MSE & Testing & 0.0015170895494520664 \\
+Convergence Factor & L1 & Training & 0.023908496504070377 \\
+Convergence Factor & L1 & Testing & 0.023865242609902033 \\
 \hline
 \end{tabular}
 \caption{Final training MSE/L1 loss values for the two models.  Lower values correspond to higher model accuracy.}
 \label{tab:loss}
 \end{table}
 
-\subsection{Discrete Grid Optimization}
+\section{Discrete Grid Optimization}
 
-In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} optimizer was used to obtain the grid corresponding to the minimum convergence factor, with the convergence factor being predicted by the neural network.  Results of this minimization can be seen on a standard Poisson problem in Figure \ref{fig:optimized_grid_poisson}.  Optimization results for a variable coefficient problem, with $k$ equal to an offset sine wave can be seen in Figure \ref{fig:optimized_grid_varcoeff}.  It is interesting to note that even though the algorithm converged to a semi-optimal grid, the predicted convergence factor was horribly inaccurate (276\% error).
+In an attempt to find the most ``convergent'' grid, an implementation of the \textit{simulated annealing} optimizer was used to obtain the grid that minimizes both the convergence rate and C/F ratio (number of points on the coarsest level divided by the total number of grid points).  To minimize both metrics, each iteration of the simulated annealing algorithm alternates between optimizing the convergence rate, or the C/F ratio.  Thus, each pass steps either towards a more optimal C/F ratio, or more optimal convergence rate.  An overview is given in Algorithm \ref{anneal}.  The algorithm itself and helper methods are adapted from those in \citep{Bertsimas1993}.
+
+As a sanity check, the optimizer was first run on \textit{only} the convergence factor (Fig \ref{fig:optimized_grid_poisson_conv}) and the C/F ratio (Fig \ref{fig:optimized_grid_poisson_cf}).  An example of optimizing both can be seen in Figure \ref{fig:optimized_grid_poisson}, though the final output is wildly dependant on the random input guess.  More tweaking to the parameters and the algorithm itself is likely needed.
+
+\begin{algorithm}
+  \caption{Simulated annealing}
+  \label{anneal}
+  \begin{algorithmic}
+    \Function{anneal}{}
+      \State $\mat{G} \gets $ generate\_random\_grid() \Comment{Generate random grid and evaluate obj. function}
+      \State $\vec{\phi}_G \gets \phi\left(\mat{G}\right)$
+      \For {$k \gets 1\ldots k_{\text{max}}$}
+        \State $t := T\left(k/k_{\text{max}}\right)$ \Comment{Compute current temperature value}
+        \State $\mat{S} := $ random\_perturb($\mat{G}$) \Comment{Generate a random next step, and evaluate obj. function}
+        \State $\vec{\phi}_S := \phi\left(\mat{S}\right)$
+        \State $i := k \mod\ 2$ \Comment{Alternate minimizing each metric}
+        \If{$P\left(\vec{\phi}_G, \vec{\phi}_S, t, i\right) \geq $ random(0,1)}
+          \State $\mat{G} \gets \mat{S}$ \Comment{Randomly take the next step according to the temperature}
+          \State $\vec{\phi}_G \gets \vec{\phi}_S$
+        \EndIf
+      \EndFor
+    \EndFunction
+    ~\newline
+    \Function{$\phi$}{$\mat{G}$} \Comment{Objective function to minimize}
+      \State $c := $ CNN\_conv$\left(\mat{G}\right)$
+      \State $w := \abs{\text{C points in }\mat{G}} / \abs{\text{total points in } \mat{G}}$
+      \State \Return $\begin{bmatrix} c & w \end{bmatrix}^T$
+    \EndFunction
+    ~\newline
+    \Function{T}{$r$} \Comment{Computes temperature of current iteration}
+      \State
+      \Return $\frac{1}{10\log\left(r\right)}$
+    \EndFunction
+    ~\newline
+    \Function{P}{$e, e^\prime, T, i$} \Comment{Computes probability of switching grids}
+      \State
+      \Return $\exp\left(\sfrac{-\left(\vec{e}^\prime_i - \vec{e}_i\right)}{T}\right)$
+    \EndFunction
+\end{algorithmic}
+\end{algorithm}
+
 
 \begin{figure}[h]
   \centering
@@ -210,16 +255,34 @@ In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} opt
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.7]{figures/grid-opt/poisson_unitary_grid_time.png}
-  \caption{Time evolution of grid obtained by optimizing CNN output on a normal poisson problem, initial grid on bottom and final grid on top.  This was computed using SciPy's Basin-hopping optimizer.  True convergence factor: $0.2105$, predicted factor: $0.2070$.  Elapsed time: $7.980$ seconds.  }
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_time_conv_only.png}
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_conv_conv_only.png}
+  \caption{(Top) Time evolution of grid obtained by optimizing CNN output on a normal poisson problem, initial grid on bottom and final grid on top.  (Bottom) convergence behaviour of the resulting grid.  This was computed using simulated annealing, though only optimizing on the \textit{convergence factor}.  True convergence factor: $0.14123$, predicted factor: $0.12423$.  C/F ratio: $0.80645$.  Elapsed time: $1.42712$ seconds.  }
+  \label{fig:optimized_grid_poisson_conv}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_time_cf_only.png}
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_conv_cf_only.png}
+  \caption{(Top) Time evolution of grid obtained by optimizing CNN output on a normal poisson problem, initial grid on bottom and final grid on top.  (Bottom) convergence behaviour of the resulting grid.  This was computed using simulated annealing, though only optimizing on the \textit{C/F ratio}.  True convergence factor: $0.92223$, predicted factor: $0.91534$.  C/F ratio: $0.064516$.  Elapsed time: $0.91058$ seconds.  }
+  \label{fig:optimized_grid_poisson_cf}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_time.png}
+  \includegraphics[scale=0.5]{figures/grid-opt/poisson_unitary_grid_conv.png}
+  \caption{(Top) Time evolution of grid obtained by optimizing CNN output and C/F ratio on a normal poisson problem, initial grid on bottom and final grid on top.  (Bottom) convergence behaviour of the resulting grid.  This was computed using simulated annealing as described in Algorithm \ref{anneal}.  True convergence factor: $0.37479$, predicted factor: $0.38923$.  C/F ratio: $0.48387$.  Elapsed time: $1.4640$ seconds.  }
   \label{fig:optimized_grid_poisson}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[scale=0.5]{figures/grid-opt/poisson_sine_coeffs.png}
-  \includegraphics[scale=0.5]{figures/grid-opt/poisson_sine_grid_time.png}
-  \caption{$k(x)=1+0.95\sin\left(400\pi x\right)$ and time evolution of grid obtained by optimizing CNN output on the variable coefficient poisson problem, initial grid on bottom and final grid on top.  True convergence factor: $0.1945$, predicted factor: $0.7317$.  Elapsed time: $8.521$ seconds.  }
+  \includegraphics[scale=0.4]{figures/grid-opt/poisson_sine_grid_time.png}\\
+  \includegraphics[scale=0.3]{figures/grid-opt/poisson_sine_coeffs.png}
+  \includegraphics[scale=0.3]{figures/grid-opt/poisson_sine_grid_conv.png}
+  \caption{(Top) Time evolution of grid obtained by optimizing CNN output on the variable coefficient poisson problem, initial grid on bottom and final grid on top.  (Left) Variable coefficient function, $k(x)=1+0.95\sin\left(\pi x\right)$.  (Right) final convergence behaviour.  True convergence factor: $0.47893$, predicted factor: $0.85469$.  Elapsed time: $1.47459$ seconds.  }
   \label{fig:optimized_grid_varcoeff}
 \end{figure}
 
@@ -236,5 +299,9 @@ In an attempt to find the most ``convergent'' grid, a \textit{Basin-hopping} opt
 %%   \caption{Grid in the testing/training data that minimizes convergence factor.  This is just a grid of all coarse points, which reduces to a direct solve.}
 %%   \label{fig:optimized_grid_in_data}
 %% \end{figure}
+
+\nocite{*}
+\bibliographystyle{siam}
+\bibliography{jacobi-conv-cnn}
 
 \end{document}

@@ -46,7 +46,8 @@ def c_random(x):
 def c_cos(x):
     lmbda = random_value(1, 5, 5)
     omega = random_value(1, 5, 5)
-    return omega*np.cos(x * np.pi * lmbda) + omega
+    alpha = random_value(1, 5, 5)
+    return omega*np.cos(x * np.pi * lmbda) + alpha
 
 def c_poly(x):
     n = np.random.randint(2, 5)

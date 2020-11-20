@@ -64,26 +64,34 @@ class CNN(nn.Module):
             nn.Conv1d(cl, cl, 7, padding=3),
             nn.Conv1d(cl, cl, 7, padding=3),
             nn.Conv1d(cl, cl, 7, padding=3),
+            nn.Conv1d(cl, cl, 7, padding=3),
+            nn.Conv1d(cl, cl, 7, padding=3),
 
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
+            nn.Conv1d(cl, cl, 5, padding=2),
+            nn.Conv1d(cl, cl, 5, padding=2),
 
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
+            nn.Conv1d(cl, cl, 3, padding=1),
+            nn.Conv1d(cl, cl, 3, padding=1),
+
             nn.MaxPool1d(2, 2)], nnF.relu)
 
         # fully connected layers
         self.fc_input = 15 * cl
-        self.fc_layers = 6
+        self.fc_layers = 8
         layer_sizes = np.ceil(np.linspace(self.fc_input, 1, self.fc_layers+1)).astype(int)
         layers = []
         for i in range(self.fc_layers):
             layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))
         self.fully_connected = Sequential(layers, nnF.relu)
+        debug(layers)
 
 
     def forward(self, x):
@@ -123,6 +131,9 @@ class GridDataset(td.Dataset):
 
         scaled_metric = (self.orig_metric - self.m_min) / (self.m_max - self.m_min)
         self.metric = torch.Tensor(scaled_metric)
+
+    def scale_coeff_input(self, c):
+        return c / self.coeffs_radius
 
     def scale_output(self, output):
         # scale to 0 - (max-min)

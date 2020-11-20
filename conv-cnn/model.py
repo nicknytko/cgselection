@@ -64,21 +64,28 @@ class CNN(nn.Module):
             nn.Conv1d(cl, cl, 7, padding=3),
             nn.Conv1d(cl, cl, 7, padding=3),
             nn.Conv1d(cl, cl, 7, padding=3),
+            nn.Conv1d(cl, cl, 7, padding=3),
+            nn.Conv1d(cl, cl, 7, padding=3),
 
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
             nn.Conv1d(cl, cl, 5, padding=2),
+            nn.Conv1d(cl, cl, 5, padding=2),
+            nn.Conv1d(cl, cl, 5, padding=2),
 
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
             nn.Conv1d(cl, cl, 3, padding=1),
+            nn.Conv1d(cl, cl, 3, padding=1),
+            nn.Conv1d(cl, cl, 3, padding=1),
+
             nn.MaxPool1d(2, 2)], nnF.relu)
 
         # fully connected layers
         self.fc_input = 15 * cl
-        self.fc_layers = 6
+        self.fc_layers = 8
         layer_sizes = np.ceil(np.linspace(self.fc_input, 1, self.fc_layers+1)).astype(int)
         layers = []
         for i in range(self.fc_layers):
