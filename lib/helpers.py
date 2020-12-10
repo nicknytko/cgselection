@@ -3,6 +3,8 @@ import numpy.linalg as la
 import scipy
 import scipy.optimize
 import scipy.linalg as sla
+import scipy.io as sio
+import scipy.sparse as sp
 import matplotlib.pyplot as plt
 import torch
 import pickle
@@ -217,3 +219,9 @@ def gen_1d_poisson_fd_vc(N, k):
 
 def midpt(x):
     return np.average(np.column_stack([x[1:], x[:-1]]), axis=1)
+
+def load_recirc_flow(fname='recirc-flow-25.mat'):
+    loaded = sio.loadmat(fname)
+    A = sp.csr_matrix(loaded['A'])
+    b = np.array(loaded['b']).flatten()
+    return A,b
