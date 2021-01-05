@@ -9,12 +9,13 @@ import sys
 sys.path.append('../lib')
 
 import helpers
-#from model import *
+from model import *
 
 try:
     omegas = np.array(helpers.pickle_load('omegas.pkl'))
     conv = np.array(helpers.pickle_load('conv.pkl'))
     grids = np.array(helpers.pickle_load('grids.pkl'))
+    A, b = helpers.load_recirc_flow(f'recirc-flow-25.mat')
     print('loaded weights, convergence rates, and grids to `omegas`, `conv`, `grids`')
 except e:
     print('No generated grid data')

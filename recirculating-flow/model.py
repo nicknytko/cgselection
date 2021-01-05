@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as nnF
 import torch.utils.data as td
+import scipy.sparse as sp
+import torch_geometric as tg
 
 if __name__ == '__main__':
     debug = print
@@ -58,18 +60,16 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
 
         # convolutional layer
-        cl = 10
+        cl = 1
         self.res_conv = SequentialRes([
-            nn.Conv2d(1, cl, 5, padding=2),
-            nn.Conv2d(cl, cl, 5, padding=2),
-            nn.Conv2d(cl, cl, 5, padding=2),
+            nn.Conv2d(1,  cl, 7, padding=3),
+            nn.Conv2d(cl, cl, 7, padding=3),
+            nn.Conv2d(cl, cl, 7, padding=3),
+
             nn.Conv2d(cl, cl, 5, padding=2),
             nn.Conv2d(cl, cl, 5, padding=2),
             nn.Conv2d(cl, cl, 5, padding=2),
 
-            nn.Conv2d(cl, cl, 3, padding=1),
-            nn.Conv2d(cl, cl, 3, padding=1),
-            nn.Conv2d(cl, cl, 3, padding=1),
             nn.Conv2d(cl, cl, 3, padding=1),
             nn.Conv2d(cl, cl, 3, padding=1),
             nn.Conv2d(cl, cl, 3, padding=1),
@@ -78,7 +78,7 @@ class CNN(nn.Module):
 
         # fully connected layers
         self.fc_input = 13**2 * cl
-        self.fc_layers = 5
+        self.fc_layers = 1
         layer_sizes = np.ceil(np.linspace(self.fc_input, 1, self.fc_layers+1)).astype(int)
         layers = []
         for i in range(self.fc_layers):
@@ -95,14 +95,92 @@ class CNN(nn.Module):
         c_grid = self.res_conv(c1)
         debug('c_grid', c_grid.shape)
 
-        # Flatten and concatenate
-        #c_flat = torch.cat((c_grid, c_coeff)).view([-1,1,self.fc_input]); debug('flatten', c_flat.shape)
+        # Flatten
         c_flat = c_grid.view([-1,1,self.fc_input]); debug('flatten', c_flat.shape)
 
         # Fully connected layers
         c_fc = self.fully_connected(c_flat)
 
         return c_fc
+
+
+def elem_vector(n, i):
+    with torch.no_grad():
+        e = torch.zeros((n,1))
+        e[i] = 1.0
+    return e
+
+def elem_mat(m, n, col):
+    with torch.no_grad():
+        E = torch.zeros((m,n))
+        E[:,col] = 1.0
+    return e
+
+class GNN(nn.Module):
+    def __init__(self, A):
+        super(GNN, self).__init__()
+
+        self.A = A
+        self.edge_index, self.edge_weight = tg.utils.from_scipy_sparse_matrix(A)
+
+        self.conv1 = tg.nn.GCNConv(1, 1)
+        self.conv2 = tg.nn.GCNConv(1, 1)
+        self.lin1 = nn.Linear(676, 1)
+
+    # def forward_one(self, x):
+    #     A = self.A
+    #     n = A.shape[0]
+    #     h = x.reshape((n,1))
+    #     for i in range(self.hidden_layers):
+    #         for v in range(n):
+    #             mt = torch.zeros(1)
+    #             N = sp.find(A[v])[1]
+    #             for vN in N:
+    #                 if vN == v:
+    #                     continue
+    #                 evw =  A[v,vN]
+    #                 Mt = self.tanh(self.Wfc * (self.Wcf * h[v] + self.b1) * (self.Wdf * evw + self.b2))
+    #                 mt = mt + Mt
+    #             ev = elem_vector(n, v)
+    #             h = h + ev * mt
+    #         h = nnF.relu(h)
+    #     R = 0
+    #     for i in range(n):
+    #         R += nnF.relu(self.lin2(nnF.relu(self.lin1(h[i]))))
+    #     return R
+
+    def forward(self, x):
+        x = x.reshape((-1, 26*26, 1))
+        x = nnF.relu(self.conv1(x, self.edge_index, self.edge_weight)).float()
+        #print(x[0])
+        #print(x)
+        x = nnF.relu(self.conv2(x, self.edge_index, self.edge_weight)).float()
+        x = x.reshape(-1, 26*26)
+        x = nnF.relu(self.lin1(x))
+        return x
+
+        # N = x.shape[0]
+        # y = torch.ones((N,1))
+
+        # h = x.reshape(N,-1)
+        # n = h.shape[1]
+
+        # for i in range(N):
+        #    y = y + (elem_vector(N, i) * self.forward_one(x[i]))
+        # return y
+
+        # for i in range(self.hidden_layers):
+        #     for v in range(n):
+        #         mt = torch.zeros(N)
+        #         N = sp.find(A[v])[1]
+        #         for vN in N:
+        #             if vN == v:
+        #                 continue
+        #             evw = A[v, vN]
+        #             Mt = self.tanh(self.Wfc * (self.Wcf * h[:,v] + self.b1) * (self.Wdf * evw + self.b2))
+        #             mt = mt + Mt
+        #         em = elem_mat(N,n)
+        #         h = h + em * mt
 
 class GridDataset(td.Dataset):
     def load_pickle(self, fname):
@@ -111,15 +189,10 @@ class GridDataset(td.Dataset):
 
     def __init__(self, grid_file, metric_file):
         grids = torch.Tensor(self.load_pickle(grid_file))
-        #grid_coeffs_tensor = torch.Tensor(self.load_pickle(coefficients_file))
-        #grid_coeffs_tensor = grid_coeffs_tensor.reshape((-1, 1, grid_coeffs_tensor.shape[1]))
-        #self.coeffs_radius = torch.max(torch.abs(grid_coeffs_tensor))
-
-        #grid_tensor = grids.reshape((grids.shape[0], 1, grids.shape[1]))
-        #self.grids = torch.cat((grid_tensor, grid_coeffs_tensor), dim=1)
         self.grids = grids
 
         self.orig_metric = np.array(self.load_pickle(metric_file))
+        self.orig_metric[np.where(np.isnan(self.orig_metric))] = 0
         self.m_min = np.min(self.orig_metric)
         self.m_max = np.max(self.orig_metric)
 

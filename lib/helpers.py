@@ -59,6 +59,21 @@ def display_grid(tf):
     plt.plot(xs[F], ys[F], 'bo', ms=15, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
     plt.legend()
 
+def display_grid_2d(G):
+    plt.figure(figsize=(10,10))
+
+    n, m = G.shape
+    x = np.linspace(0, 1, m)
+    y = np.linspace(0, 1, n)
+
+    xx, yy = np.meshgrid(x, y)
+
+    C = np.where(G > 0)
+    F = np.where(G <= 0)
+    plt.plot(xx[C], yy[C], 'rs', ms=15, markerfacecolor="None", markeredgecolor='red', markeredgewidth=2, label="C Pts")
+    plt.plot(xx[F], yy[F], 'bo', ms=15, markerfacecolor="None", markeredgecolor='blue', markeredgewidth=2, label="F Pts")
+    plt.legend()
+
 def display_many_grids(T):
     n = T.shape[0]
     plt.figure(figsize=(10,3*n))

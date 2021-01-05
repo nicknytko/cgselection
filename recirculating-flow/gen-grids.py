@@ -90,7 +90,10 @@ def mgv(P, A, b, x_ref, omega=0.666, tol=1e-10):
             break
 
     err = np.array(err)
-    conv_factor = np.mean(err[1:] / err[:-1])
+    if len(err) == 0:
+        conv_factor = 0
+    else:
+        conv_factor = np.mean(err[1:] / err[:-1])
     return conv_factor
 
 def create_interp(grid):
@@ -140,7 +143,9 @@ for ci, c in enumerate(coarsenings):
 
             # Create the randomly permuted "perm_C"
             perm_G, P = permute_grid()
-            best_conv, best_omega = det_conv_factor_optimal_omega(P, A, b, x_ref)
+            #best_conv, best_omega = det_conv_factor_optimal_omega(P, A, b, x_ref)
+            best_conv = mgv(P, A, b, x_ref, omega=1.0)
+            best_omega = 1.0
 
             # run multigrid iterations
             grids[i] = (perm_G*2)-1
@@ -164,11 +169,11 @@ outputs = [
     },
     {
         'var': rates,
-        'fname': args['outweights']
+        'fname': args['outconv']
     },
     {
         'var': omegas,
-        'fname': args['outconv']
+        'fname': args['outweights']
     },
 ]
 

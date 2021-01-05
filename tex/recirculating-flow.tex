@@ -1,0 +1,65 @@
+\input{header.tex}
+
+\begin{document}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/conv_train_mse.png}
+  \caption{(CNN) MSE loss per training iteration}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/conv_train_l1.png}
+  \caption{(CNN) L1 loss per training iteration}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/conv_test_pred.png}
+  \caption{(CNN) Predicted vs Actual Convergence Factor (Testing Dataset)}
+  \label{fig:test}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/conv_train_pred.png}
+  \caption{(CNN) Predicted vs Actual Convergence Factor (Training Dataset)}
+  \label{fig:train}
+\end{figure}
+
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/gnn_train_mse.png}
+  \caption{(GNN) MSE loss per training iteration}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/gnn_train_l1.png}
+  \caption{(GNN) L1 loss per training iteration}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/gnn_test_pred.png}
+  \caption{(GNN) Predicted vs Actual Convergence Factor (Testing Dataset)}
+  \label{fig:test}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.7]{figures/recircflow/gnn_train_pred.png}
+  \caption{(GNN) Predicted vs Actual Convergence Factor (Training Dataset)}
+  \label{fig:train}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[scale=0.5]{figures/recircflow/gnn_grid_worst.png}
+  \caption{(GNN) Worst predicted grid.  Actual convergence factor $0.7252$, predicted $0.3256$.}
+  \label{fig:train}
+\end{figure}
+
+\end{document}
