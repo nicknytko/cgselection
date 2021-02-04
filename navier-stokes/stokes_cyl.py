@@ -1,4 +1,5 @@
 # Cylinder flow problem
+# Adapted from https://www.firedrakeproject.org/demos/navier_stokes.py.html
 
 from firedrake import *
 import matplotlib.pyplot as plt
